@@ -1,0 +1,246 @@
+:root {
+  --bg: #0f1115;
+  --panel: #161922;
+  --border: #2a2f3a;
+  --text: #e6e8ee;
+  --muted: #9aa3b2;
+  --accent: #4f8cff;
+  --accent2: #2ecf8f;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--panel);
+}
+header h1 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 600;
+  margin-right: 10px;
+}
+.radiol {
+  font-size: 12px;
+}
+.radiol input {
+  font-size: 12px;
+}
+.btn {
+  background: #232838;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover {
+  background: #2b3145;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.btn.primary:hover {
+  background: #3f78e0;
+}
+.btn.success {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #04211a;
+  font-weight: 600;
+}
+.btn.success:hover {
+  background: #28b87e;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+input[type="file"] {
+  display: none;
+}
+#fileLabel {
+  cursor: pointer;
+}
+.spacer {
+  flex: 1;
+}
+#status {
+  font-size: 12px;
+  color: var(--muted);
+}
+#toolbar2 {
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #12141b;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+#toolbar2 label {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#quickFilter {
+  background: #0f1115;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 240px;
+}
+#gridWrap {
+  flex: 1;
+  position: relative;
+}
+#myGrid {
+  width: 100%;
+  height: 100%;
+}
+#dropZone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--muted);
+  z-index: 5;
+  pointer-events: none;
+}
+#dropZone .box {
+  border: 2px dashed var(--border);
+  padding: 40px 60px;
+  border-radius: 12px;
+  text-align: center;
+  pointer-events: all;
+  background: rgba(22, 25, 34, 0.6);
+}
+#dropZone .box b {
+  color: var(--text);
+}
+select#pageSizeSel {
+  background: #0f1115;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+.ag-theme-alpine-dark {
+  --ag-font-size: 13px;
+}
+
+.folder-tabs {
+  margin-top: 2px;
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  position: relative;
+  top: 1px; /* so the active tab visually merges with the grid border below */
+}
+
+.folder-tab {
+  background: #232838;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  color: var(--muted);
+  padding: 8px 22px 7px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  user-select: none;
+  position: relative;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.folder-tab:hover {
+  background: #2b3145;
+  color: var(--text);
+}
+
+.folder-tab.active {
+  background-color: #222628; /* matches the grid area behind it */
+  color: var(--text);
+  border-color: #68686e;
+  z-index: 2;
+}
+
+/* the "cut corner" folder-tab look */
+.folder-tab::before,
+.folder-tab::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+}
+
+.folder-tab.disabled {
+  background: #1a1c24;
+  color: #565c6b;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.folder-tab.disabled:hover {
+  background: #1a1c24; /* override the normal hover background so it doesn't react */
+  color: #565c6b;
+}
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal-box {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 24px; width: 380px; display: flex; flex-direction: column; gap: 14px;
+}
+.modal-box h2 { margin: 0 0 4px; font-size: 16px; }
+
+.modal-row { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.modal-row input[type=file] {
+  display: block; background: #0f1115; border: 1px solid var(--border);
+  color: var(--text); padding: 6px; border-radius: 6px; font-size: 12px;
+}
+.required { color: #ff6b6b; }
+.optional { color: var(--muted); font-weight: 400; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+.hidden {
+  display: none;
+}
