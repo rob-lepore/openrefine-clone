@@ -5,7 +5,7 @@
   --text: #e6e8ee;
   --muted: #9aa3b2;
   --accent: #4f8cff;
-  --accent2: #2ecf8f;
+  --accent2: #F3F9D2;
 }
 * {
   box-sizing: border-box;
@@ -71,7 +71,7 @@ header h1 {
   font-weight: 600;
 }
 .btn.success:hover {
-  background: #28b87e;
+  background: #fffea7;
 }
 .btn:disabled {
   opacity: 0.4;
@@ -219,28 +219,183 @@ select#pageSizeSel {
   color: #565c6b;
 }
 
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.6);
-  display: flex; align-items: center; justify-content: center; z-index: 50;
+#folder-filename{
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding-top: 0.2rem
 }
-.modal-overlay.hidden { display: none; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.modal-overlay.hidden {
+  display: none;
+}
 
 .modal-box {
-  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-  padding: 24px; width: 380px; display: flex; flex-direction: column; gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-.modal-box h2 { margin: 0 0 4px; font-size: 16px; }
-
-.modal-row { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
-.modal-row input[type=file] {
-  display: block; background: #0f1115; border: 1px solid var(--border);
-  color: var(--text); padding: 6px; border-radius: 6px; font-size: 12px;
+.modal-box h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
 }
-.required { color: #ff6b6b; }
-.optional { color: var(--muted); font-weight: 400; }
 
-.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.modal-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.modal-row input[type="file"] {
+  display: block;
+  background: #0f1115;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.required {
+  color: #ff6b6b;
+}
+.optional {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
 
 .hidden {
   display: none;
+}
+
+.col-toggle-wrap {
+  position: relative;
+}
+
+.col-toggle-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 30;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+.col-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.col-toggle-item:hover {
+  background: #232838;
+}
+.col-toggle-item input {
+  cursor: pointer;
+}
+.col-toggle-item.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.col-toggle-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.col-toggle-actions button {
+  flex: 1;
+  background: #232838;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.col-toggle-actions button:hover {
+  background: #2b3145;
+}
+
+.col-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: default;
+  border: 1px solid transparent;
+}
+.col-toggle-item:hover {
+  background: #232838;
+}
+.col-toggle-item.locked {
+  opacity: 0.5;
+}
+.col-toggle-item.dragging {
+  opacity: 0.35;
+}
+.col-toggle-item.drag-over {
+  border-top: 2px solid var(--accent);
+}
+
+.col-drag-handle {
+  cursor: grab;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+  padding: 0 2px;
+}
+.col-drag-handle:active {
+  cursor: grabbing;
+}
+
+.col-filter-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  margin-left: 0.5rem;
+}
+
+.col-toggle-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
 }

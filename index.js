@@ -24,7 +24,6 @@ function main() {
   };
 
   let gridApi = null;
-  let originalFileName = "data.tsv";
   let rowIdCounter = 0;
 
   let datasets = {
@@ -147,7 +146,6 @@ function main() {
               maxNumConditions: 10,
             },
         floatingFilter: true,
-        enableRowGroup: true,
         minWidth: 120,
         cellRenderer: isLink ? linkCellRenderer : undefined,
       };
@@ -171,38 +169,10 @@ function main() {
       },
       rowSelection: "multiple",
       suppressRowClickSelection: true,
-      animateRows: true,
+      animateRows: false,
       undoRedoCellEditing: true,
       undoRedoCellEditingLimit: 50,
-      enableRangeSelection: true,
-      enableFillHandle: true,
-      rowGroupPanelShow: "always",
-      sideBar: {
-        toolPanels: [
-          {
-            id: "columns",
-            labelDefault: "Columns",
-            labelKey: "columns",
-            iconKey: "columns",
-            toolPanel: "agColumnsToolPanel",
-            toolPanelParams: {
-              suppressRowGroups: false,
-              suppressValues: true,
-              suppressPivots: true,
-              suppressPivotMode: true,
-            },
-          },
-          {
-            id: "filters",
-            labelDefault: "Filters",
-            labelKey: "filters",
-            iconKey: "filter",
-            toolPanel: "agFiltersToolPanel",
-          },
-        ],
-        defaultToolPanel: "",
-      },
-      pagination: true,
+      pagination: els.pageSizeSel.value != 0,
       paginationPageSize: els.pageSizeSel.value,
       paginationPageSizeSelector: false,
       onSelectionChanged: updateButtonStates,
@@ -242,6 +212,8 @@ function main() {
       els.onlyVisibleRows,
       els.onlySelectedRows,
       els.pageSizeSel,
+      document.getElementById("colToggleBtn"),
+      document.getElementById("confBtn")
     ].forEach((el) => (el.disabled = false));
   }
 
@@ -288,16 +260,17 @@ function main() {
   }
 
   // ---------- File loading ----------
-  function addDataset(ds) {
+  function addDataset(ds, name) {
     ds.headers.unshift("Notes");
     ds.filterModel = {};
     ds.selectedIds = new Set();
+    ds.name = name;
     datasets.list.push(ds);
   }
   function switchDataset(which) {
     if (datasets.active === which || which >= datasets.list.length) return;
 
-    if (datasets.active != -1){
+    if (datasets.active != -1) {
       datasets.list[datasets.active].selectedIds = new Set(
         gridApi.getSelectedRows().map((r) => r.__id),
       );
@@ -307,6 +280,7 @@ function main() {
     ds = datasets.list[datasets.active];
     console.log(datasets);
     initGrid(ds.headers, ds.rows);
+    document.getElementById("folder-filename").textContent = ds.name;
 
     if (ds.selectedIds && ds.selectedIds.size > 0) {
       gridApi.forEachNode((node) => {
@@ -320,7 +294,7 @@ function main() {
   }
 
   function loadFile(file) {
-    originalFileName = file.name || "data.tsv";
+    let originalFileName = file.name || "data.tsv";
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -332,7 +306,7 @@ function main() {
           );
           return;
         }
-        addDataset({ headers, rows });
+        addDataset({ headers, rows }, originalFileName);
         resolve({ headers, rows });
         // initGrid(headers, rows);
       };
@@ -350,24 +324,26 @@ function main() {
       alert("HOM and HET files are required.");
       return;
     }
+    datasets = {
+      active: -1,
+      list: [],
+      columnState: [],
+    };
     await loadFile(homFile);
     await loadFile(hetFile);
     if (compFile) await loadFile(compFile);
-    else els.COMPbtn.classList.add("disabled")
+    else els.COMPbtn.classList.add("disabled");
 
     console.log("File loaded");
     switchDataset(0);
 
     els.loadModal.classList.add("hidden");
-    document.getElementById('fileTabs').classList.remove("hidden")
+    document.getElementById("fileTabs").classList.remove("hidden");
   });
 
   // document.addEventListener("DOMContentLoaded", async () => {
-  //   if (FILENAMES.length < 3){
-  //     els.COMPbtn.classList.add("disabled")
-  //   }
-  //   for (let i = 0; i < FILENAMES.length; i++) {
-  //     const response = await fetch(`http://localhost:5500/${FILENAMES[i]}`);
+  //   for (let i = 0; i < 2; i++) {
+  //     const response = await fetch(`http://localhost:5500/Galaxy${i + 1}.txt`);
   //     const blob = await response.blob();
   //     const file = new File([blob], "data.csv", {
   //       type: blob.type || "text/csv",
@@ -535,7 +511,8 @@ function main() {
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const baseName = originalFileName.replace(/\.[^/.]+$/, "");
+    // const baseName = originalFileName.replace(/\.[^/.]+$/, "");
+    const baseName = "data";
     a.href = url;
     a.download = `${baseName}_combined.tsv`;
     document.body.appendChild(a);
@@ -543,6 +520,161 @@ function main() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   });
+
+  const colToggleBtn = document.getElementById("colToggleBtn");
+  const colToggleMenu = document.getElementById("colToggleMenu");
+
+  colToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (colToggleMenu.classList.contains("hidden")) {
+      buildColumnToggleMenu();
+      colToggleMenu.classList.remove("hidden");
+    } else {
+      colToggleMenu.classList.add("hidden");
+    }
+  });
+
+  // close when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!colToggleMenu.contains(e.target) && e.target !== colToggleBtn) {
+      colToggleMenu.classList.add("hidden");
+    }
+  });
+
+  function buildColumnToggleMenu() {
+    if (!gridApi) return;
+    const listEl = document.getElementById("colToggleList");
+    listEl.innerHTML = "";
+
+    const filterModel = gridApi.getFilterModel(); // { field: {...filterConfig} } for active filters
+    const allColumns = gridApi.getAllGridColumns(); // respects current order
+
+    allColumns.forEach((col) => {
+      const colDef = col.getColDef();
+      if (!colDef.field) return;
+
+      const locked = colDef.lockVisible === true;
+      const isVisible = col.isVisible();
+      const hasFilter = Object.prototype.hasOwnProperty.call(
+        filterModel,
+        colDef.field,
+      );
+
+      const item = document.createElement("div");
+      item.className = "col-toggle-item" + (locked ? " locked" : "");
+      item.draggable = true;
+      item.dataset.field = colDef.field;
+
+      const handle = document.createElement("span");
+      handle.className = "col-drag-handle";
+      handle.textContent = "⠿";
+
+      const label = document.createElement("label");
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = isVisible;
+      checkbox.disabled = locked;
+      checkbox.addEventListener("change", () => {
+        gridApi.setColumnsVisible([colDef.field], checkbox.checked);
+      });
+
+      const text = document.createElement("span");
+      text.textContent = colDef.headerName || colDef.field;
+      if (hasFilter) {
+        const span = document.createElement("span");
+        span.className = "col-filter-icon";
+        span.title = "Filter active on this column";
+        span.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="-2 -2 24 24"><title xmlns="">${span.title}</title><path fill="currentColor" d="m2.08 2l6.482 8.101A2 2 0 0 1 9 11.351V18l2-1.5v-5.15a2 2 0 0 1 .438-1.249L17.92 2zm0-2h15.84a2 2 0 0 1 1.561 3.25L13 11.35v5.15a2 2 0 0 1-.8 1.6l-2 1.5A2 2 0 0 1 7 18v-6.65L.519 3.25A2 2 0 0 1 2.08 0"/></svg>`;
+        // item.appendChild(span);
+        text.appendChild(span);
+      }
+
+      label.appendChild(checkbox);
+      label.appendChild(text);
+
+      item.appendChild(handle);
+      item.appendChild(label);
+
+      listEl.appendChild(item);
+    });
+
+    wireDragAndDrop(listEl);
+  }
+
+  function wireDragAndDrop(listEl) {
+    let draggedEl = null;
+
+    listEl.querySelectorAll(".col-toggle-item").forEach((item) => {
+      item.addEventListener("dragstart", (e) => {
+        draggedEl = item;
+        item.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+
+      item.addEventListener("dragend", () => {
+        item.classList.remove("dragging");
+        listEl
+          .querySelectorAll(".col-toggle-item")
+          .forEach((el) => el.classList.remove("drag-over"));
+        applyColumnOrder(listEl);
+      });
+
+      item.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (item === draggedEl) return;
+        item.classList.add("drag-over");
+      });
+
+      item.addEventListener("dragleave", () => {
+        item.classList.remove("drag-over");
+      });
+
+      item.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (item === draggedEl) return;
+        item.classList.remove("drag-over");
+
+        const rect = item.getBoundingClientRect();
+        const after = e.clientY - rect.top > rect.height / 2;
+        listEl.insertBefore(draggedEl, after ? item.nextSibling : item);
+      });
+    });
+  }
+
+  function applyColumnOrder(listEl) {
+    if (!gridApi) return;
+    const orderedFields = Array.from(
+      listEl.querySelectorAll(".col-toggle-item"),
+    ).map((item) => item.dataset.field);
+
+    gridApi.moveColumns(orderedFields, 0); // move all columns into this order, starting at index 0
+  }
+
+  function setAllColumns(visible) {
+    if (!gridApi) return;
+    const allColumns = gridApi.getColumns();
+    const fields = allColumns
+      .map((col) => col.getColDef())
+      .filter((colDef) => colDef.field && colDef.lockVisible !== true) // skip locked columns
+      .map((colDef) => colDef.field);
+
+    gridApi.setColumnsVisible(fields, visible);
+
+    // sync checkboxes in the open menu without rebuilding the whole list
+    document
+      .querySelectorAll("#colToggleList input[type=checkbox]")
+      .forEach((cb) => {
+        if (!cb.disabled) cb.checked = visible;
+      });
+  }
+
+  document
+    .getElementById("colSelectAll")
+    .addEventListener("click", () => setAllColumns(true));
+  document
+    .getElementById("colDeselectAll")
+    .addEventListener("click", () => setAllColumns(false));
 }
 
 main();

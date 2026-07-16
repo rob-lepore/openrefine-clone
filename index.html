@@ -3,23 +3,47 @@
   <head>
     <meta charset="UTF-8" />
     <title>TSV Grid Editor</title>
-    <script src="https://cdn.jsdelivr.net/npm/ag-grid-enterprise@31.3.2/dist/ag-grid-enterprise.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/ag-grid-enterprise@31.3.2/dist/ag-grid-enterprise.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ag-grid/31.3.2/ag-grid-community.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header>
-      <h1>📄 TSV Grid Editor</h1>
+      <h1>GeneRefine</h1>
       <button class="btn primary" id="openModalBtn">📂 Open TSV</button>
 
-      <label class="btn" id="confLabel" for="confInput">📂 Open config</label>
-      <input type="file" id="confInput" accept=".json" />
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        viewBox="0 0 16 16"
+      >
+        <title xmlns="">divider-tall-16-filled</title>
+        <path
+          fill="currentColor"
+          d="M7.75 1a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-1.5 0V1.75A.75.75 0 0 1 7.75 1"
+        />
+      </svg>
 
-      <button class="btn" id="downloadConfBtn" disabled>
-        ⚙️ Download config
-      </button>
-      <button class="btn" id="resetBtn" disabled>
-        ↩️ Reset Columns/Filters
-      </button>
+      <button class="btn" id="confBtn" disabled onclick="document.getElementById('confInput').click()">Load options</button>
+      <input type="file" id="confInput" accept=".json" style="display: none" />
+
+      <button class="btn" id="downloadConfBtn" disabled>Export options</button>
+
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="1em"
+        height="1em"
+        viewBox="0 0 16 16"
+      >
+        <title xmlns="">divider-tall-16-filled</title>
+        <path
+          fill="currentColor"
+          d="M7.75 1a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-1.5 0V1.75A.75.75 0 0 1 7.75 1"
+        />
+      </svg>
+
+      <button class="btn" id="resetBtn" disabled>Reset Columns/Filters</button>
 
       <div class="spacer"></div>
       <label class="radiol"
@@ -52,6 +76,18 @@
           <option value="500">500</option>
         </select>
       </label>
+
+      <div class="col-toggle-wrap">
+        <button class="btn" id="colToggleBtn" disabled>☰ Columns</button>
+        <div id="colToggleMenu" class="col-toggle-menu hidden">
+          <div class="col-toggle-actions">
+            <button type="button" id="colSelectAll">Select all</button>
+            <button type="button" id="colDeselectAll">Deselect all</button>
+          </div>
+          <div id="colToggleList"></div>
+        </div>
+      </div>
+
       <div class="spacer"></div>
       <span id="status">No file loaded</span>
     </div>
@@ -60,6 +96,8 @@
       <div class="folder-tab active" id="HOMbtn">HOM</div>
       <div class="folder-tab" id="HETbtn">HET</div>
       <div class="folder-tab" id="COMPbtn">COMP</div>
+      <div class="spacer"></div>
+      <span id="folder-filename"></span>
     </div>
 
     <div id="gridWrap">
