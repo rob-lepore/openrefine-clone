@@ -1,4 +1,108 @@
-FILENAMES = ["Galaxy135.txt", "Galaxy134.txt"];
+class CheckboxListFilter {
+  init(params) {
+    this.params = params;
+    this.eGui = document.createElement("div");
+    this.eGui.className = "checkbox-filter-panel";
+
+    // get all unique values for this column across the full dataset
+    const values = new Set();
+    params.api.forEachNode((node) => {
+      const v = node.data[params.colDef.field];
+      if (v !== "" && v !== null && v !== undefined) values.add(String(v));
+    });
+    this.allValues = Array.from(values).sort();
+    this.selected = new Set(this.allValues); // default: everything selected (no filtering)
+
+    this.buildUI();
+  }
+
+  buildUI() {
+    this.eGui.innerHTML = "";
+
+    const searchBox = document.createElement("input");
+    searchBox.type = "text";
+    searchBox.placeholder = "Search values...";
+    searchBox.className = "checkbox-filter-search";
+    searchBox.addEventListener("input", () => this.renderList(searchBox.value));
+    this.eGui.appendChild(searchBox);
+
+    const actions = document.createElement("div");
+    actions.className = "checkbox-filter-actions";
+    const selectAllBtn = document.createElement("button");
+    selectAllBtn.textContent = "Select all";
+    selectAllBtn.addEventListener("click", () => {
+      this.selected = new Set(this.allValues);
+      this.renderList(searchBox.value);
+      this.params.filterChangedCallback();
+    });
+    const clearBtn = document.createElement("button");
+    clearBtn.textContent = "Clear";
+    clearBtn.addEventListener("click", () => {
+      this.selected.clear();
+      this.renderList(searchBox.value);
+      this.params.filterChangedCallback();
+    });
+    actions.appendChild(selectAllBtn);
+    actions.appendChild(clearBtn);
+    this.eGui.appendChild(actions);
+
+    this.listEl = document.createElement("div");
+    this.listEl.className = "checkbox-filter-list";
+    this.eGui.appendChild(this.listEl);
+
+    this.renderList("");
+  }
+
+  renderList(searchTerm) {
+    this.listEl.innerHTML = "";
+    const term = searchTerm.toLowerCase();
+    this.allValues
+      .filter((v) => v.toLowerCase().includes(term))
+      .forEach((v) => {
+        const row = document.createElement("label");
+        row.className = "checkbox-filter-row";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = this.selected.has(v);
+        cb.addEventListener("change", () => {
+          if (cb.checked) this.selected.add(v);
+          else this.selected.delete(v);
+          this.params.filterChangedCallback();
+        });
+
+        const text = document.createElement("span");
+        text.textContent = v;
+
+        row.appendChild(cb);
+        row.appendChild(text);
+        this.listEl.appendChild(row);
+      });
+  }
+
+  getGui() {
+    return this.eGui;
+  }
+
+  isFilterActive() {
+    return this.selected.size < this.allValues.length;
+  }
+
+  doesFilterPass(params) {
+    const value = params.data[this.params.colDef.field];
+    return this.selected.has(String(value));
+  }
+
+  getModel() {
+    if (!this.isFilterActive()) return null;
+    return { values: Array.from(this.selected) };
+  }
+
+  setModel(model) {
+    this.selected = model ? new Set(model.values) : new Set(this.allValues);
+    this.buildUI();
+  }
+}
 
 function main() {
   const els = {
@@ -61,20 +165,14 @@ function main() {
     return s;
   }
 
+  const invalidValues = ["", undefined, null, ".", "NA", "NaN", " "];
   // ---------- Column definitions ----------
   function buildColumnDefs(headers, rows) {
     const isNumericColumn = (field) => {
       const sample = rows
         .slice(0, 50)
         .map((r) => r[field])
-        .filter(
-          (v) =>
-            v !== "" &&
-            v !== undefined &&
-            v !== null &&
-            v !== "." &&
-            v !== "NA",
-        );
+        .filter((v) => !invalidValues.includes(v));
       if (sample.length === 0) return false;
       return sample.every(
         (v) => v !== "" && !isNaN(v) && !isNaN(parseFloat(v)),
@@ -84,21 +182,18 @@ function main() {
       const sample = rows
         .slice(0, 50)
         .map((r) => r[field])
-        .filter((v) => v !== "" && v !== undefined && v !== null);
+        .filter((v) => !invalidValues.includes(v));
       if (sample.length === 0) return false;
       return sample.every((v) => /^https?:\/\//i.test(String(v)));
     };
 
     const numericFields = headers.filter(isNumericColumn);
-    console.log(numericFields);
 
     // coerce values in place, but keep empty strings as empty strings (not 0/NaN)
     rows.forEach((row) => {
       numericFields.forEach((f) => {
-        if (row[f] === " " || row[f] === "NA" || row[f] === ".") row[f] = "";
-        if (row[f] !== "" && row[f] !== null && row[f] !== undefined) {
-          row[f] = parseFloat(row[f]);
-        }
+        row[f] = parseFloat(row[f]);
+        if (isNaN(row[f])) row[f] = "";
       });
     });
 
@@ -114,7 +209,8 @@ function main() {
         sortable: true,
         resizable: true,
         lockVisible: isNotes,
-        filter: numeric ? "agNumberColumnFilter" : "agTextColumnFilter",
+        cellDataType: false,
+        filter: numeric ? "agNumberColumnFilter" : CheckboxListFilter,
         filterParams: numeric
           ? {
               filterOptions: [
@@ -132,22 +228,15 @@ function main() {
               maxNumConditions: 10,
             }
           : {
-              filterOptions: [
-                "contains",
-                "notContains",
-                "equals",
-                "notEqual",
-                "startsWith",
-                "endsWith",
-                "blank",
-                "notBlank",
-              ],
-              defaultOption: "equals",
-              maxNumConditions: 10,
+              undefined,
             },
         floatingFilter: true,
         minWidth: 120,
-        cellRenderer: isLink ? linkCellRenderer : undefined,
+        cellRenderer: isLink
+          ? linkCellRenderer
+          : !numeric
+            ? textareaCellRenderer
+            : undefined,
       };
     });
   }
@@ -168,6 +257,7 @@ function main() {
         floatingFilter: true,
       },
       rowSelection: "multiple",
+      rowHeight: 50,
       suppressRowClickSelection: true,
       animateRows: false,
       undoRedoCellEditing: true,
@@ -213,7 +303,7 @@ function main() {
       els.onlySelectedRows,
       els.pageSizeSel,
       document.getElementById("colToggleBtn"),
-      document.getElementById("confBtn")
+      document.getElementById("confBtn"),
     ].forEach((el) => (el.disabled = false));
   }
 
@@ -246,8 +336,30 @@ function main() {
     datasets.columnState = gridApi.getColumnState();
   }
 
+  function textareaCellRenderer(params) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cell-textarea-wrapper";
+
+    const textarea = document.createElement("textarea");
+    textarea.readOnly = true;
+    textarea.value = params.value ?? "";
+    textarea.className = "cell-textarea";
+    textarea.rows = 1;
+
+    wrapper.appendChild(textarea);
+
+    requestAnimationFrame(() => {
+      textarea.style.height = "auto";
+      const naturalHeight = textarea.scrollHeight;
+      const maxHeight = wrapper.clientHeight || naturalHeight;
+      textarea.style.height = Math.min(naturalHeight, maxHeight) + "px";
+    });
+
+    return wrapper;
+  }
+
   function linkCellRenderer(params) {
-    if (!params.value) return "";
+    if (!params.value || params.value === "NA") return "";
     const url = params.value;
     const a = document.createElement("a");
     a.href = url;
@@ -337,6 +449,7 @@ function main() {
     console.log("File loaded");
     switchDataset(0);
 
+    document.getElementById("load-form").reset()
     els.loadModal.classList.add("hidden");
     document.getElementById("fileTabs").classList.remove("hidden");
   });

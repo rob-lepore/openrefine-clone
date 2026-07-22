@@ -153,9 +153,6 @@ select#pageSizeSel {
   padding: 5px 8px;
   border-radius: 6px;
 }
-.ag-theme-alpine-dark {
-  --ag-font-size: 13px;
-}
 
 .folder-tabs {
   margin-top: 2px;
@@ -219,10 +216,10 @@ select#pageSizeSel {
   color: #565c6b;
 }
 
-#folder-filename{
+#folder-filename {
   color: var(--muted);
   font-size: 0.8rem;
-  padding-top: 0.2rem
+  padding-top: 0.2rem;
 }
 
 .modal-overlay {
@@ -398,4 +395,100 @@ select#pageSizeSel {
   gap: 8px;
   flex: 1;
   cursor: pointer;
+}
+
+.checkbox-filter-panel {
+  padding: 8px;
+  width: 220px;
+}
+.checkbox-filter-search {
+  width: 100%;
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  box-sizing: border-box;
+  background: #0f1115;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+}
+.checkbox-filter-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.checkbox-filter-actions button {
+  flex: 1;
+  font-size: 11px;
+  padding: 4px;
+  background: #232838;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.checkbox-filter-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.checkbox-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cell-textarea-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.cell-textarea {
+  width: 100%;
+  resize: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  padding: 4px;
+  overflow-y: auto;
+  line-height: 1.4;
+  box-sizing: border-box;
+  outline: none;
+  cursor: default;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #3a3f4d transparent;
+}
+
+.cell-textarea:hover {
+  cursor: default;
+}
+
+/* Chrome, Safari, Edge (WebKit) */
+.cell-textarea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.cell-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cell-textarea::-webkit-scrollbar-thumb {
+  background: #3a3f4d;
+  border-radius: 3px;
+}
+
+.cell-textarea::-webkit-scrollbar-thumb:hover {
+  background: #4a5064;
+}
+
+.cell-textarea::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
 }
