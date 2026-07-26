@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>GeneRefine</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ag-grid/31.3.2/ag-grid-community.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body class="ag-theme-alpine-dark">
+  <body>
     <header>
       <h1>GeneRefine</h1>
       <button class="btn primary" id="openModalBtn">📂 Open TSV</button>
-
+      <!-- 
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="1em"
@@ -24,11 +24,17 @@
         />
       </svg>
 
-      <button class="btn" id="confBtn" disabled onclick="document.getElementById('confInput').click()">Load options</button>
-      <input type="file" id="confInput" accept=".json" style="display: none" />
+      <button
+        class="btn"
+        id="confBtn"
+        disabled
+        onclick="document.getElementById('confInput').click()"
+      >
+        Load options
+      </button>
 
       <button class="btn" id="downloadConfBtn" disabled>Export options</button>
-
+-->
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="1em"
@@ -40,12 +46,46 @@
           fill="currentColor"
           d="M7.75 1a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-1.5 0V1.75A.75.75 0 0 1 7.75 1"
         />
-      </svg>
+      </svg> 
 
-      <button class="btn" id="resetBtn" disabled>Reset Columns/Filters</button>
 
-      <div class="spacer"></div>
-      <label class="radiol"
+      <div class="dropdown-wrap">
+        <button class="btn dropdown-trigger" id="importBtn" disabled>
+          Import <span class="dropdown-caret">▾</span>
+        </button>
+        <div class="dropdown-menu" id="importMenu">
+          <button class="dropdown-item" id="importProjectBtn" disabled>
+            Import project
+          </button>
+          <button class="dropdown-item" id="confBtn" onclick="document.getElementById('confInput').click()">
+            Import filters
+          </button>
+        </div>
+        <input type="file" id="confInput" accept=".json" style="display: none" />
+
+      </div>
+
+      <div class="dropdown-wrap">
+        <button class="btn dropdown-trigger" id="exportBtn" disabled>
+          Export <span class="dropdown-caret">▾</span>
+        </button>
+        <div class="dropdown-menu" id="exportMenu">
+          <button class="dropdown-item" id="exportProjectBtn" disabled>
+            Export project
+          </button>
+          <button class="dropdown-item" id="downloadConfBtn">
+            Export filters
+          </button>
+          <button class="dropdown-item" id="downloadBtn">
+            TSV (all rows)
+          </button>
+          <button class="dropdown-item" id="downloadSelBtn">
+            TSV (only selected)
+          </button>
+        </div>
+      </div>
+
+      <!-- <label class="radiol"
         ><input type="radio" id="onlyVisibleRows" checked disabled /> Export all
         visible rows</label
       >
@@ -55,7 +95,7 @@
       >
       <button class="btn success" id="downloadBtn" disabled>
         ⬇️ Export TSV
-      </button>
+      </button> -->
     </header>
 
     <div id="toolbar2">
@@ -64,6 +104,7 @@
         id="quickFilter"
         placeholder="🔍 Quick filter across all columns..."
         disabled
+        class="hidden"
       />
       <label
         >Page size:
@@ -86,6 +127,7 @@
           <div id="colToggleList"></div>
         </div>
       </div>
+      <button class="btn" id="resetBtn" disabled>Reset Columns/Filters</button>
 
       <div class="spacer"></div>
       <span id="status">No file loaded</span>
@@ -100,7 +142,7 @@
     </div>
 
     <div id="gridWrap">
-      <div id="myGrid" ></div>
+      <div id="myGrid"></div>
     </div>
 
     <div id="loadModal" class="modal-overlay hidden">
@@ -108,34 +150,34 @@
         <h2>Load datasets</h2>
 
         <form id="load-form">
-        <div class="modal-row">
-          <label for="fileHOM">HOM <span class="required">*</span></label>
-          <input
-            type="file"
-            id="fileHOM"
-            accept=".tsv,.txt,text/tab-separated-values"
-          />
-        </div>
+          <div class="modal-row">
+            <label for="fileHOM">HOM <span class="required">*</span></label>
+            <input
+              type="file"
+              id="fileHOM"
+              accept=".tsv,.txt,text/tab-separated-values"
+            />
+          </div>
 
-        <div class="modal-row">
-          <label for="fileHET">HET <span class="required">*</span></label>
-          <input
-            type="file"
-            id="fileHET"
-            accept=".tsv,.txt,text/tab-separated-values"
-          />
-        </div>
+          <div class="modal-row">
+            <label for="fileHET">HET <span class="required">*</span></label>
+            <input
+              type="file"
+              id="fileHET"
+              accept=".tsv,.txt,text/tab-separated-values"
+            />
+          </div>
 
-        <div class="modal-row">
-          <label for="fileCOMP"
-            >COMP <span class="optional">(optional)</span></label
-          >
-          <input
-            type="file"
-            id="fileCOMP"
-            accept=".tsv,.txt,text/tab-separated-values"
-          />
-        </div>
+          <div class="modal-row">
+            <label for="fileCOMP"
+              >COMP <span class="optional">(optional)</span></label
+            >
+            <input
+              type="file"
+              id="fileCOMP"
+              accept=".tsv,.txt,text/tab-separated-values"
+            />
+          </div>
         </form>
 
         <div class="modal-actions">

@@ -106,25 +106,35 @@ class CheckboxListFilter {
 
 function main() {
   const els = {
+    // HEADER
     fileInput: document.getElementById("fileInput"),
+    importMenu: document.getElementById("importBtn"),
+    importProject: document.getElementById("importProjectBtn"),
+    importFilters: document.getElementById("confBtn"),
     confInput: document.getElementById("confInput"),
+    exportMenu: document.getElementById("exportBtn"),
+    exportProject: document.getElementById("exportProjectBtn"),
     downloadConfBtn: document.getElementById("downloadConfBtn"),
-    resetBtn: document.getElementById("resetBtn"),
     downloadBtn: document.getElementById("downloadBtn"),
-    quickFilter: document.getElementById("quickFilter"),
-    onlyVisibleRows: document.getElementById("onlyVisibleRows"),
-    onlySelectedRows: document.getElementById("onlySelectedRows"),
-    pageSizeSel: document.getElementById("pageSizeSel"),
-    status: document.getElementById("status"),
-    gridWrap: document.getElementById("gridWrap"),
-    HOMbtn: document.getElementById("HOMbtn"),
-    HETbtn: document.getElementById("HETbtn"),
-    COMPbtn: document.getElementById("COMPbtn"),
+    downloadSelBtn: document.getElementById("downloadSelBtn"),
+    // FILE INPUT MODAL
     loadModal: document.getElementById("loadModal"),
     modalLoadBtn: document.getElementById("modalLoadBtn"),
     fileHOM: document.getElementById("fileHOM"),
     fileHET: document.getElementById("fileHET"),
     fileCOMP: document.getElementById("fileCOMP"),
+    // TOOLBAR
+    // quickFilter: document.getElementById("quickFilter"),
+    pageSizeSel: document.getElementById("pageSizeSel"),
+    colToggleBtn: document.getElementById("colToggleBtn"),
+    colToggleMenu: document.getElementById("colToggleMenu"),
+    resetBtn: document.getElementById("resetBtn"),
+    status: document.getElementById("status"),
+    // GRID
+    HOMbtn: document.getElementById("HOMbtn"),
+    HETbtn: document.getElementById("HETbtn"),
+    COMPbtn: document.getElementById("COMPbtn"),
+    gridWrap: document.getElementById("gridWrap"),
   };
 
   let gridApi = null;
@@ -206,6 +216,7 @@ function main() {
         field: h,
         headerName: h,
         editable: isNotes,
+        pinned: isNotes ? "left" : "",
         sortable: true,
         resizable: true,
         lockVisible: isNotes,
@@ -246,6 +257,16 @@ function main() {
     const columnDefs = buildColumnDefs(headers, rows);
 
     const gridOptions = {
+      theme: agGrid.themeQuartz.withParams({
+        backgroundColor: "#1f2836",
+        browserColorScheme: "dark",
+        chromeBackgroundColor: {
+          ref: "foregroundColor",
+          mix: 0.07,
+          onto: "backgroundColor",
+        },
+        foregroundColor: "#FFF",
+      }),
       columnDefs,
       rowData: rows,
       getRowId: (params) => String(params.data.__id),
@@ -298,12 +319,10 @@ function main() {
       els.downloadConfBtn,
       els.resetBtn,
       els.downloadBtn,
-      els.quickFilter,
-      els.onlyVisibleRows,
-      els.onlySelectedRows,
       els.pageSizeSel,
-      document.getElementById("colToggleBtn"),
-      document.getElementById("confBtn"),
+      els.colToggleBtn,
+      els.importMenu,
+      els.exportMenu,
     ].forEach((el) => (el.disabled = false));
   }
 
@@ -449,9 +468,34 @@ function main() {
     console.log("File loaded");
     switchDataset(0);
 
-    document.getElementById("load-form").reset()
+    document.getElementById("load-form").reset();
     els.loadModal.classList.add("hidden");
     document.getElementById("fileTabs").classList.remove("hidden");
+  });
+  document.querySelectorAll(".dropdown-wrap").forEach((wrap) => {
+    const trigger = wrap.querySelector(".dropdown-trigger");
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = wrap.classList.contains("open");
+      // close all dropdowns first
+      document
+        .querySelectorAll(".dropdown-wrap")
+        .forEach((w) => w.classList.remove("open"));
+      // then reopen this one if it wasn't already open
+      if (!isOpen) wrap.classList.add("open");
+    });
+  });
+
+  // close any open dropdown when clicking outside
+  document.addEventListener("click", () => {
+    document
+      .querySelectorAll(".dropdown-wrap")
+      .forEach((w) => w.classList.remove("open"));
+  });
+
+  // prevent clicks inside the menu from closing it via the document listener above
+  document.querySelectorAll(".dropdown-menu").forEach((menu) => {
+    menu.addEventListener("click", (e) => e.stopPropagation());
   });
 
   // document.addEventListener("DOMContentLoaded", async () => {
@@ -505,7 +549,6 @@ function main() {
     if (!gridApi) return;
     gridApi.setFilterModel(null);
     gridApi.resetColumnState();
-    els.quickFilter.value = "";
     gridApi.setGridOption("quickFilterText", "");
     updateStatus();
     // reset datasets
@@ -515,17 +558,17 @@ function main() {
     }
   });
 
-  els.quickFilter.addEventListener("input", () => {
-    if (!gridApi) return;
-    gridApi.setGridOption("quickFilterText", els.quickFilter.value);
-  });
+  // els.quickFilter.addEventListener("input", () => {
+  //   if (!gridApi) return;
+  //   gridApi.setGridOption("quickFilterText", els.quickFilter.value);
+  // });
 
-  els.onlyVisibleRows.addEventListener("change", () => {
-    if (els.onlyVisibleRows.checked) els.onlySelectedRows.checked = false;
-  });
-  els.onlySelectedRows.addEventListener("change", () => {
-    if (els.onlySelectedRows.checked) els.onlyVisibleRows.checked = false;
-  });
+  // els.onlyVisibleRows.addEventListener("change", () => {
+  //   if (els.onlyVisibleRows.checked) els.onlySelectedRows.checked = false;
+  // });
+  // els.onlySelectedRows.addEventListener("change", () => {
+  //   if (els.onlySelectedRows.checked) els.onlyVisibleRows.checked = false;
+  // });
 
   els.pageSizeSel.addEventListener("change", () => {
     if (!gridApi) return;
@@ -542,7 +585,7 @@ function main() {
 
   els.downloadConfBtn.addEventListener("click", () => {
     configs = {
-      columnState: gridApi.getColumnState(),
+      columnState: [],
       filterModel: gridApi.getFilterModel(),
     };
     const json = JSON.stringify(configs, null, 2); // pretty-printed
@@ -556,7 +599,9 @@ function main() {
     URL.revokeObjectURL(url);
   });
 
-  els.downloadBtn.addEventListener("click", () => {
+  function downloadData(e) {
+    const selected = e.srcElement === els.downloadSelBtn;
+    console.log("qui", selected)
     if (!gridApi) return;
 
     const gtypeLabels = { 0: "HOM", 1: "HET", 2: "COMP" };
@@ -586,17 +631,11 @@ function main() {
 
       // 2. Collect rows respecting current sort/filter (or selection)
       const rows = [];
-      const useSelected = els.onlySelectedRows.checked;
-      const useVisibleOnly = els.onlyVisibleRows.checked;
 
-      if (useSelected) {
+      if (selected) {
         gridApi.getSelectedNodes().forEach((node) => rows.push(node.data));
-      } else if (useVisibleOnly) {
-        gridApi.forEachNodeAfterFilterAndSort((node) => {
-          if (node.data) rows.push(node.data);
-        });
       } else {
-        gridApi.forEachNode((node) => {
+        gridApi.forEachNodeAfterFilterAndSort((node) => {
           if (node.data) rows.push(node.data);
         });
       }
@@ -632,25 +671,25 @@ function main() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  });
+  }
 
-  const colToggleBtn = document.getElementById("colToggleBtn");
-  const colToggleMenu = document.getElementById("colToggleMenu");
+  els.downloadBtn.addEventListener("click", downloadData);
+  els.downloadSelBtn.addEventListener("click", downloadData);
 
-  colToggleBtn.addEventListener("click", (e) => {
+  els.colToggleBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (colToggleMenu.classList.contains("hidden")) {
+    if (els.colToggleMenu.classList.contains("hidden")) {
       buildColumnToggleMenu();
-      colToggleMenu.classList.remove("hidden");
+      els.colToggleMenu.classList.remove("hidden");
     } else {
-      colToggleMenu.classList.add("hidden");
+      els.colToggleMenu.classList.add("hidden");
     }
   });
 
   // close when clicking outside
   document.addEventListener("click", (e) => {
-    if (!colToggleMenu.contains(e.target) && e.target !== colToggleBtn) {
-      colToggleMenu.classList.add("hidden");
+    if (!els.colToggleMenu.contains(e.target) && e.target !== els.colToggleBtn) {
+      els.colToggleMenu.classList.add("hidden");
     }
   });
 
