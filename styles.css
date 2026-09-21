@@ -505,7 +505,7 @@ select#pageSizeSel {
 }
 
 .dropdown-caret {
-  font-size: 10px;
+  font-size: 1rem;
   transition: transform 0.15s ease;
 }
 

@@ -8,7 +8,8 @@ class CheckboxListFilter {
     const values = new Set();
     params.api.forEachNode((node) => {
       const v = node.data[params.colDef.field];
-      if (v !== "" && v !== null && v !== undefined) values.add(String(v));
+      // if (v !== "" && v !== null && v !== undefined) 
+      values.add(String(v));
     });
     this.allValues = Array.from(values).sort();
     this.selected = new Set(this.allValues); // default: everything selected (no filtering)
@@ -174,9 +175,9 @@ function main() {
     s = s.replace(/\t/g, " ").replace(/\r?\n/g, " ");
     return s;
   }
-
-  const invalidValues = ["", undefined, null, ".", "NA", "NaN", " "];
+  
   // ---------- Column definitions ----------
+  const invalidValues = ["", undefined, null, ".", "NA", "NaN", " "];
   function buildColumnDefs(headers, rows) {
     const isNumericColumn = (field) => {
       const sample = rows
