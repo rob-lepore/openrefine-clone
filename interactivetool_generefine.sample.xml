@@ -1,0 +1,39 @@
+<tool id="generefine" tool_type="interactive" name="GeneRefine" version="1.0.0">
+    <description>GeneRefine</description>
+    <requirements>
+        <container type="docker">
+            immagine:tag</container>
+    </requirements>
+    <entry_points>
+        <entry_point name="GeneRefine" requires_domain="False">
+            <port>8080</port>
+        </entry_point>
+    </entry_points>
+    <command detect_errors="exit_code"><![CDATA[
+          ln -s '$input1' /usr/share/nginx/html/input1.tsv ;
+          ln -s '$input2' /usr/share/nginx/html/input2.tsv ;
+          #if $input3:
+              ln -s '$input3' /usr/share/nginx/html/input3.tsv ;
+          #end if
+          mkdir -p "\$(dirname '$out_file1')/.nginx_tmp" ;
+          sed -e "s|__OUT__|$out_file1|g" -e "s|__OUTDIR__|\$(dirname '$out_file1')|g" /etc/nginx/nginx.conf.tpl > /tmp/nginx.conf ;
+          nginx -c /tmp/nginx.conf -g 'daemon off;'
+        ]]></command>
+    <environment_variables>
+    </environment_variables>
+
+    <inputs>
+        <param name="input1" type="data" format="txt,tabular" label="HOM File" />
+        <param name="input2" type="data" format="txt,tabular" label="HET File" />
+        <param name="input3" type="data" format="txt,tabular" optional="true"
+            label="COMP File (optional)" />
+    </inputs>
+    <outputs>
+        <data format="tsv" name="out_file1" label="Risultato Generefine" />
+    </outputs>
+    <tests></tests>
+
+    <help> <![CDATA[
+
+        ]]></help>
+</tool>

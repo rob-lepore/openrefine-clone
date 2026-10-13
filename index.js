@@ -499,20 +499,31 @@ function main() {
     menu.addEventListener("click", (e) => e.stopPropagation());
   });
 
-  // document.addEventListener("DOMContentLoaded", async () => {
-  //   for (let i = 0; i < 2; i++) {
-  //     const response = await fetch(`http://localhost:5500/Galaxy${i + 1}.txt`);
-  //     const blob = await response.blob();
-  //     const file = new File([blob], "data.csv", {
-  //       type: blob.type || "text/csv",
-  //       lastModified: Date.now(),
-  //     });
+  document.addEventListener("DOMContentLoaded", async () => {
+    datasets = {
+      active: -1,
+      list: [],
+      columnState: [],
+    };
+    let i;
+    for (i = 0; i < 3; i++) {
+      const response = await fetch(`input${i + 1}.tsv`);
+      if (response.status == 404) {
+        break
+      }
+      const blob = await response.blob();
+      const file = new File([blob], `data${i + 1}.tsv`, {
+        type: blob.type || "text/tsv",
+        lastModified: Date.now(),
+      });
 
-  //     loadFile(file);
-  //   }
-  //   initGrid(datasets.list[0].headers, datasets.list[0].rows);
-  //   datasets.columnState = gridApi.getColumnState();
-  // });
+      await loadFile(file);
+    }
+    if (i<3)
+      els.COMPbtn.classList.add("disabled");
+    switchDataset(0)
+    document.getElementById("fileTabs").classList.remove("hidden");
+  });
 
   els.HOMbtn.addEventListener("click", () => {
     switchDataset(0);
@@ -600,7 +611,7 @@ function main() {
     URL.revokeObjectURL(url);
   });
 
-  function downloadData(e) {
+  async function downloadData(e) {
     const selected = e.srcElement === els.downloadSelBtn;
     console.log("qui", selected)
     if (!gridApi) return;
@@ -657,21 +668,38 @@ function main() {
     }
 
     const tsvContent = lines.join("\n");
+    
+    try {
+      const response = await fetch('output.tsv', {
+          method: 'PUT',
+          body: tsvContent
+      });
+
+      if (!response.ok) {
+        console.log(response)
+          throw new Error(`Errore HTTP: ${response.status} ${response.statusText}`);
+      }
+
+      alert('File salvato con successo!');
+
+  } catch (error) {
+      alert(`Errore durante il salvataggio: ${error.message}`);
+  }
 
     // 4. Trigger download
-    const blob = new Blob([tsvContent], {
-      type: "text/tab-separated-values;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    // const blob = new Blob([tsvContent], {
+    //   type: "text/tab-separated-values;charset=utf-8;",
+    // });
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement("a");
     // const baseName = originalFileName.replace(/\.[^/.]+$/, "");
-    const baseName = "data";
-    a.href = url;
-    a.download = `${baseName}_combined.tsv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // const baseName = "data";
+    // a.href = url;
+    // a.download = `${baseName}_combined.tsv`;
+    // document.body.appendChild(a);
+    // a.click();
+    // document.body.removeChild(a);
+    // URL.revokeObjectURL(url);
   }
 
   els.downloadBtn.addEventListener("click", downloadData);
