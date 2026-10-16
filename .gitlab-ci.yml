@@ -2,22 +2,22 @@ stages:
   - build
 
 variables:
-  DOCKER_HOST: tcp://docker:2375
-  DOCKER_TLS_CERTDIR: ""
   IMAGE_NAME: $CI_REGISTRY_IMAGE/generefine:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
 
 build_image:
   stage: build
-  image: tiangolo/docker-with-compose
+  image: docker
+  variables:
+    DOCKER_HOST: tcp://dind:2375
+    DOCKER_TLS_CERTDIR: ""
   services:
-    - name: docker:dind
-      alias: docker
-      variables:
-        HEALTHCHECK_TCP_PORT: "2375"
+    - name: docker-dind
+      alias: dind
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
   script:
     - echo "Building $IMAGE_NAME"
+    - docker info
     - docker build --pull --tag "$IMAGE_NAME" .
     - docker push "$IMAGE_NAME"
   tags:
