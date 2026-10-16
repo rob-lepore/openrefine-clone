@@ -1,29 +1,22 @@
 stages:
-  - base-build
+  - build
 
 variables:
-  BASE_IMAGE: $CI_REGISTRY_IMAGE/generefine
-  BASE_IMAGE_COMMIT: ${BASE_IMAGE}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
-  BASE_IMAGE_BRANCH: ${BASE_IMAGE}:${CI_COMMIT_REF_SLUG}
-  DOCKER_HOST: tcp://dind:2375
+  DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
-  WORKING_DIR: $CI_PROJECT_DIR
+  IMAGE_NAME: $CI_REGISTRY_IMAGE/generefine:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
 
-
-container:
-  stage: base-build
-  image: docker
+build_image:
+  stage: build
+  image: tiangolo/docker-with-compose
   services:
     - name: docker:dind
-      alias: dind
-  script:
-    - echo "Building $BASE_IMAGE_COMMIT"
-    - docker info
+      alias: docker
+  before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
-    - docker build --pull --tag "$BASE_IMAGE_COMMIT" .
-    - docker tag "$BASE_IMAGE_COMMIT" "$BASE_IMAGE_BRANCH"
-    - docker push --all-tags "$BASE_IMAGE"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
+  script:
+    - echo "Building $IMAGE_NAME"
+    - docker build --pull --tag "$IMAGE_NAME" .
+    - docker push "$IMAGE_NAME"
   tags:
     - dind
