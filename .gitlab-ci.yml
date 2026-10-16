@@ -11,7 +11,7 @@ build_image:
     DOCKER_HOST: tcp://dind:2375
     DOCKER_TLS_CERTDIR: ""
   services:
-    - name: docker-dind
+    - name: docker:dind
       alias: dind
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
