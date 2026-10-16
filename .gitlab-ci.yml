@@ -16,6 +16,7 @@ build_image:
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
   script:
+    - docker info
     - echo "Building $IMAGE_NAME"
     - docker info
     - docker build --pull --tag "$IMAGE_NAME" .
