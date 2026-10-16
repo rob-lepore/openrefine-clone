@@ -8,17 +8,18 @@ variables:
 
 build_image:
   stage: build
-  image: tiangolo/docker-with-compose
+  image: docker
   services:
     - name: docker:dind
-      alias: docker
+      alias: dind
       variables:
         HEALTHCHECK_TCP_PORT: "2375"
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
   script:
+    - docker info
     - echo "Building $IMAGE_NAME"
-    - docker build --pull --tag "$IMAGE_NAME" .
+    - docker build --tag "$IMAGE_NAME" .
     - docker push "$IMAGE_NAME"
   tags:
     - dind
