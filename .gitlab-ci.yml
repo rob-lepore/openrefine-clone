@@ -1,24 +1,24 @@
 stages:
-  - build
+  - lint
 
-variables:
-  IMAGE_NAME: $CI_REGISTRY_IMAGE/generefine:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
-
-build_image:
-  stage: build
-  image: docker
-  variables:
-    DOCKER_HOST: tcp://dind:2375
-    DOCKER_TLS_CERTDIR: ""
-  services:
-    - name: docker:dind
-      alias: dind
+lint-galaxy-xml:
+  stage: lint
+  image: python:3.12-slim
   script:
-    - docker info
-    - echo "$CI_REGISTRY_PASSWORD" | docker login $CI_REGISTRY -u $CI_REGISTRY_USER --password-stdin
-    - echo "Building $IMAGE_NAME"
-    - docker info
-    - docker build --pull --tag "$IMAGE_NAME" .
-    - docker push "$IMAGE_NAME"
-  tags:
-    - dind
+    - pip install --quiet planemo
+    - planemo lint interactivetool_generefine.sample.xml
+
+lint-dockerfile:
+  stage: lint
+  image:
+    name: hadolint/hadolint:latest-debian
+    entrypoint: [""]
+  script:
+    - hadolint Dockerfile
+
+validate-citation:
+  stage: lint
+  image: python:3.12-slim
+  script:
+    - pip install --quiet cffconvert
+    - cffconvert --validate
