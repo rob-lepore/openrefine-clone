@@ -318,7 +318,6 @@ function main() {
   function enableToolbar() {
     [
       els.downloadConfBtn,
-      els.resetBtn,
       els.downloadBtn,
       els.pageSizeSel,
       els.colToggleBtn,
@@ -447,32 +446,6 @@ function main() {
     });
   }
 
-  els.modalLoadBtn.addEventListener("click", async () => {
-    const homFile = els.fileHOM.files[0];
-    const hetFile = els.fileHET.files[0];
-    const compFile = els.fileCOMP.files[0]; // may be undefined
-
-    if (!homFile || !hetFile) {
-      alert("HOM and HET files are required.");
-      return;
-    }
-    datasets = {
-      active: -1,
-      list: [],
-      columnState: [],
-    };
-    await loadFile(homFile);
-    await loadFile(hetFile);
-    if (compFile) await loadFile(compFile);
-    else els.COMPbtn.classList.add("disabled");
-
-    console.log("File loaded");
-    switchDataset(0);
-
-    document.getElementById("load-form").reset();
-    els.loadModal.classList.add("hidden");
-    document.getElementById("fileTabs").classList.remove("hidden");
-  });
   document.querySelectorAll(".dropdown-wrap").forEach((wrap) => {
     const trigger = wrap.querySelector(".dropdown-trigger");
     trigger.addEventListener("click", (e) => {
@@ -556,31 +529,6 @@ function main() {
   });
 
   // ---------- Toolbar actions ----------
-
-  els.resetBtn.addEventListener("click", () => {
-    if (!gridApi) return;
-    gridApi.setFilterModel(null);
-    gridApi.resetColumnState();
-    gridApi.setGridOption("quickFilterText", "");
-    updateStatus();
-    // reset datasets
-    updateDatasetsState();
-    for (let d of datasets.list) {
-      d.filterModel = {};
-    }
-  });
-
-  // els.quickFilter.addEventListener("input", () => {
-  //   if (!gridApi) return;
-  //   gridApi.setGridOption("quickFilterText", els.quickFilter.value);
-  // });
-
-  // els.onlyVisibleRows.addEventListener("change", () => {
-  //   if (els.onlyVisibleRows.checked) els.onlySelectedRows.checked = false;
-  // });
-  // els.onlySelectedRows.addEventListener("change", () => {
-  //   if (els.onlySelectedRows.checked) els.onlyVisibleRows.checked = false;
-  // });
 
   els.pageSizeSel.addEventListener("change", () => {
     if (!gridApi) return;
