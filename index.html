@@ -25,11 +25,14 @@
 
       <div class="dropdown-wrap">
         <button class="btn dropdown-trigger" id="importBtn" disabled>
-          Import <span class="dropdown-caret">▾</span>
+          Filters <span class="dropdown-caret">▾</span>
         </button>
         <div class="dropdown-menu" id="importMenu">
           <button class="dropdown-item" id="confBtn" onclick="document.getElementById('confInput').click()">
             Import filters
+          </button>
+          <button class="dropdown-item" id="downloadConfBtn">
+            Export filters
           </button>
         </div>
         <input type="file" id="confInput" accept=".json" style="display: none" />
@@ -38,17 +41,14 @@
 
       <div class="dropdown-wrap">
         <button class="btn dropdown-trigger" id="exportBtn" disabled>
-          Export <span class="dropdown-caret">▾</span>
+          Export TSV <span class="dropdown-caret">▾</span>
         </button>
         <div class="dropdown-menu" id="exportMenu">
-          <button class="dropdown-item" id="downloadConfBtn">
-            Export filters
-          </button>
           <button class="dropdown-item" id="downloadBtn">
-            TSV (all rows)
+            All rows
           </button>
           <button class="dropdown-item" id="downloadSelBtn">
-            TSV (only selected)
+            Only selected
           </button>
         </div>
       </div>
