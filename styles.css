@@ -439,6 +439,12 @@ select#pageSizeSel {
   cursor: pointer;
 }
 
+.checkbox-filter-warning {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #f0b429;
+}
+
 .cell-textarea-wrapper {
   display: flex;
   align-items: center;

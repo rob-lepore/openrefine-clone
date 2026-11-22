@@ -13,7 +13,6 @@ const datasets = {
 };
 
 function main() {
-
   document.addEventListener("DOMContentLoaded", async () => {
     UIManager.setup();
 
@@ -33,10 +32,10 @@ function main() {
       });
 
       await DataManager.loadFile(file);
-      const filtersRes = await fetch(DataManager.filterURI[i])
-      if (filtersRes.ok){
-        const filters = await filtersRes.json()
-        console.log(i, filters)
+      const filtersRes = await fetch(DataManager.filterURI[i]);
+      if (filtersRes.ok) {
+        const filters = await filtersRes.json();
+        console.log(i, filters);
         datasets.get(i).filterModel = filters;
       }
     }
@@ -45,13 +44,11 @@ function main() {
     await TableManager.switchDataset(0);
     document.getElementById("fileTabs").classList.remove("hidden");
   });
-
 }
 
 main();
 
 class UIManager {
-
   static els = {
     // HEADER
     fileInput: document.getElementById("fileInput"),
@@ -164,8 +161,10 @@ class UIManager {
     this.els.downloadBtn.addEventListener("click", DataManager.downloadData);
     this.els.downloadSelBtn.addEventListener("click", DataManager.downloadData);
 
-    this.els.downloadConfBtn.addEventListener("click", DataManager.downloadFilters);
-
+    this.els.downloadConfBtn.addEventListener(
+      "click",
+      DataManager.downloadFilters,
+    );
   }
 
   static enableToolbar() {
@@ -309,7 +308,6 @@ class UIManager {
 }
 
 class DataManager {
-  
   static stateURI = {
     0: "hom_state.json",
     1: "het_state.json",
@@ -319,11 +317,11 @@ class DataManager {
     0: "hom_filters.json",
     1: "het_filters.json",
     2: "comp_filters.json",
-  }
+  };
 
   static downloadFilters() {
     const configs = gridApi.getFilterModel();
-    
+
     const json = JSON.stringify(configs, null, 2); // pretty-printed
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -394,7 +392,6 @@ class DataManager {
   }
 
   static async downloadData(e) {
-
     function tsvEscape(val) {
       if (val === null || val === undefined) return "";
       let s = String(val);
@@ -411,12 +408,12 @@ class DataManager {
     let headerWritten = false;
     const originalDataset = datasets._activeidx; // save so we can restore after export
 
-    const filters = []
+    const filters = [];
     for (let i = 0; i < datasets._list.length; i++) {
       await TableManager.switchDataset(i);
 
       filters.push(gridApi.getFilterModel());
-      
+
       // 1. Determine visible columns in current display order
       const allColumns = gridApi.getAllDisplayedColumns();
       const fields = allColumns
@@ -475,13 +472,13 @@ class DataManager {
         );
       }
 
-      for (const [idx, filterModel] of filters.entries()){
-        console.log(idx, filterModel, DataManager.filterURI[idx])
+      for (const [idx, filterModel] of filters.entries()) {
+        console.log(idx, filterModel, DataManager.filterURI[idx]);
         response = await fetch(DataManager.filterURI[idx], {
           method: "PUT",
           body: JSON.stringify(filterModel),
         });
-  
+
         if (!response.ok) {
           console.log(response);
           throw new Error(
@@ -489,7 +486,6 @@ class DataManager {
           );
         }
       }
-
 
       alert("File salvato con successo!");
     } catch (error) {
@@ -697,7 +693,9 @@ class TableManager {
       ds.rows[k].Notes = savedState.notes[k];
     }
     if (!savedState.state.filter)
-      savedState.state.filter = {filterModel: datasets.get(which).filterModel}
+      savedState.state.filter = {
+        filterModel: datasets.get(which).filterModel,
+      };
     console.log({ savedState });
     this.initGrid(ds.headers, ds.rows, savedState.state);
     document.getElementById("folder-filename").textContent = ds.name;
@@ -773,7 +771,7 @@ class TableManager {
   static CheckboxListFilter = class {
     init(params) {
       this.params = params;
-      this.excluded = new Set(); // unico stato reale del filtro
+      this.selected = null; // null = nessun filtro (tutto selezionato)
       this.allValues = [];
       this.eGui = document.createElement("div");
       this.eGui.className = "checkbox-filter-panel";
@@ -787,8 +785,26 @@ class TableManager {
     }
 
     afterGuiAttached() {
-      this.computeValues(); // dati aggiornati (anche le note modificate)
+      this.computeValues();
       this.buildUI();
+    }
+
+    // Se tutti i valori sono selezionati, torna a "nessun filtro"
+    normalize() {
+      if (this.selected && this.allValues.every((v) => this.selected.has(v))) {
+        this.selected = null;
+      }
+    }
+
+    isChecked(v) {
+      return this.selected === null || this.selected.has(v);
+    }
+
+    setChecked(v, checked) {
+      if (this.selected === null) this.selected = new Set(this.allValues);
+      if (checked) this.selected.add(v);
+      else this.selected.delete(v);
+      this.normalize();
     }
 
     buildUI() {
@@ -798,7 +814,9 @@ class TableManager {
       searchBox.type = "text";
       searchBox.placeholder = "Search values...";
       searchBox.className = "checkbox-filter-search";
-      searchBox.addEventListener("input", () => this.renderList(searchBox.value));
+      searchBox.addEventListener("input", () =>
+        this.renderList(searchBox.value),
+      );
       this.eGui.appendChild(searchBox);
 
       const actions = document.createElement("div");
@@ -806,14 +824,14 @@ class TableManager {
       const selectAllBtn = document.createElement("button");
       selectAllBtn.textContent = "Select all";
       selectAllBtn.addEventListener("click", () => {
-        this.excluded.clear();
+        this.selected = null;
         this.renderList(searchBox.value);
         this.params.filterChangedCallback();
       });
       const clearBtn = document.createElement("button");
       clearBtn.textContent = "Clear";
       clearBtn.addEventListener("click", () => {
-        this.allValues.forEach((v) => this.excluded.add(v));
+        this.selected = new Set();
         this.renderList(searchBox.value);
         this.params.filterChangedCallback();
       });
@@ -829,6 +847,22 @@ class TableManager {
 
     renderList(searchTerm) {
       this.listEl.innerHTML = "";
+
+      // Selected values that do not exist in the table
+      const missing = this.selected
+        ? [...this.selected].filter((v) => !this.allValues.includes(v)).length
+        : 0;
+
+      if (missing > 0) {
+        const warn = document.createElement("div");
+        warn.className = "checkbox-filter-warning";
+        const noneFound = this.selected.size === missing;
+        warn.textContent = noneFound
+          ? "None of the selected values are present"
+          : `${missing} selected value${missing > 1 ? "s are" : " is"} not present`;
+        this.listEl.appendChild(warn);
+      }
+
       const term = searchTerm.toLowerCase();
       this.allValues
         .filter((v) => v.toLowerCase().includes(term))
@@ -838,10 +872,9 @@ class TableManager {
 
           const cb = document.createElement("input");
           cb.type = "checkbox";
-          cb.checked = !this.excluded.has(v);
+          cb.checked = this.isChecked(v);
           cb.addEventListener("change", () => {
-            if (cb.checked) this.excluded.delete(v);
-            else this.excluded.add(v);
+            this.setChecked(v, cb.checked);
             this.params.filterChangedCallback();
           });
 
@@ -857,22 +890,27 @@ class TableManager {
     }
 
     isFilterActive() {
-      return this.excluded.size > 0;
+      return this.selected !== null;
     }
 
     doesFilterPass(p) {
-      return !this.excluded.has(String(p.data[this.params.colDef.field]));
+      return (
+        this.selected === null ||
+        this.selected.has(String(p.data[this.params.colDef.field]))
+      );
     }
 
     getModel() {
-      return this.excluded.size ? { excluded: Array.from(this.excluded) } : null;
+      return this.selected === null
+        ? null
+        : { values: Array.from(this.selected) };
     }
 
     setModel(model) {
-      this.excluded = new Set(model?.excluded ?? []);
-      if (this.listEl) this.renderList(""); // solo se la UI esiste già
+      this.selected = model?.values ? new Set(model.values) : null;
+      if (this.listEl) this.renderList("");
     }
-  }
+  };
 
   static CheckboxListFloatingFilter = class {
     init(params) {
@@ -883,9 +921,7 @@ class TableManager {
       return this.eGui;
     }
     onParentModelChanged(model) {
-      this.eGui.textContent = model ? `${model.excluded.length} excluded` : "";
+      this.eGui.textContent = model ? `${model.values.length} selected` : "";
     }
-  }
+  };
 }
-
-
