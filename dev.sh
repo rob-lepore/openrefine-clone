@@ -25,8 +25,8 @@ for f in "$HTML_DIR"/*; do
 done
 
 # Optional: also use the local nginx config template (needs a restart to apply)
-if [ -f nginx.conf.tpl ]; then
-  mounts+=(-v "$PWD/nginx.conf.tpl:/etc/nginx/nginx.conf.tpl:ro,z")
+if [ -f nginx.conf ]; then
+  mounts+=(-v "$PWD/nginx.conf:/etc/nginx/nginx.conf.tpl:ro,z")
 fi
 
 docker rm -f "$NAME" >/dev/null 2>&1 || true
@@ -37,8 +37,16 @@ exec docker run --rm -it --name "$NAME" -p "$PORT:8080" -u "$(id -u)" \
   "${mounts[@]}" \
   --entrypoint bash "$IMAGE" -c '
 OUT=/gx/output.tsv
+HOM_FILENAME=hom_filename.tsv
+HET_FILENAME=het_filename.tsv
+COMP_FILENAME=comp_filename.tsv
 ln -s /gx/hom_file.tsv /usr/share/nginx/html/input1.tsv
 ln -s /gx/het_file.tsv /usr/share/nginx/html/input2.tsv
 mkdir -p "$(dirname $OUT)/.nginx_tmp"
+mkdir -p /tmp/state
+for file_name in hom_state het_state comp_state; do
+  echo "{\"state\": {}, \"notes\": {}}" > "/tmp/state/${file_name}.json"
+done
+echo "{\"0\": \"$HOM_FILENAME\", \"1\": \"$HET_FILENAME\", \"2\": \"$COMP_FILENAME\" }" > "/tmp/state/user_file_names.json"
 sed -e "s|__OUT__|$OUT|g" -e "s|__OUTDIR__|$(dirname $OUT)|g" /etc/nginx/nginx.conf.tpl > /tmp/nginx.conf
 nginx -c /tmp/nginx.conf -g "daemon off;"'
