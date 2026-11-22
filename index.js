@@ -17,6 +17,9 @@ function main() {
   document.addEventListener("DOMContentLoaded", async () => {
     UIManager.setup();
 
+    fileNamesRes = await fetch("user_file_names.json");
+    fileNames = await fileNamesRes.json();
+
     let i;
     for (i = 0; i < 3; i++) {
       const response = await fetch(`input${i + 1}.tsv`);
@@ -24,23 +27,22 @@ function main() {
         break;
       }
       const blob = await response.blob();
-      const file = new File([blob], `data${i + 1}.tsv`, {
+      const file = new File([blob], fileNames[i], {
         type: blob.type || "text/tsv",
         lastModified: Date.now(),
       });
 
       await DataManager.loadFile(file);
+      const filtersRes = await fetch(DataManager.filterURI[i])
+      if (filtersRes.ok){
+        const filters = await filtersRes.json()
+        console.log(i, filters)
+        datasets.get(i).filterModel = filters;
+      }
     }
     if (i < 3) UIManager.els.COMPbtn.classList.add("disabled");
 
-    fileNamesRes = await fetch("user_file_names.json");
-    fileNames = await fileNamesRes.json();
-    for (let k in Object.keys(fileNames)) {
-      if (!datasets.get(k)) break;
-      datasets.get(k).name = fileNames[k];
-    }
-
-    TableManager.switchDataset(0);
+    await TableManager.switchDataset(0);
     document.getElementById("fileTabs").classList.remove("hidden");
   });
 
@@ -118,11 +120,6 @@ class UIManager {
       if (this.els.COMPbtn.classList.contains("disabled")) return;
       TableManager.switchDataset(2);
     });
-
-    // els.fileInput.addEventListener("change", (e) => {
-    //   const file = e.target.files[0];
-    //   if (file) loadFile(file);
-    // });
 
     this.els.confInput.addEventListener("change", DataManager.loadFilters);
 
@@ -318,12 +315,15 @@ class DataManager {
     1: "het_state.json",
     2: "comp_state.json",
   };
+  static filterURI = {
+    0: "hom_filters.json",
+    1: "het_filters.json",
+    2: "comp_filters.json",
+  }
 
   static downloadFilters() {
-    configs = {
-      columnState: [],
-      filterModel: gridApi.getFilterModel(),
-    };
+    const configs = gridApi.getFilterModel();
+    
     const json = JSON.stringify(configs, null, 2); // pretty-printed
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -336,18 +336,12 @@ class DataManager {
   }
 
   /* Apply filter configuration to the specified dataset */
-  static async loadFilters(uri, dataset) {
-    console.error("wrong call");
-    return;
+  static async loadFilters(event) {
+    const file = event.target.files?.[0];
     try {
-      const res = await fetch(uri);
-      const obj = await res.json();
-      console.log(obj);
-      // const obj = JSON.parse(await file.text());
-      // gridApi.setFilterModel(obj.filterModel);
-      // gridApi.applyColumnState({ state: obj.columnState, applyOrder: true });
-      // dataset.filterModel = obj.filterModel;
-      return obj;
+      const obj = JSON.parse(await file.text());
+      gridApi.setFilterModel(obj);
+      datasets.getActive().filterModel = obj.filterModel;
     } catch (err) {
       console.error("Invalid JSON:", err);
     }
@@ -378,6 +372,8 @@ class DataManager {
       return { headers, rows };
     }
 
+    const originalFileName = file.name;
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -389,7 +385,7 @@ class DataManager {
           );
           return;
         }
-        TableManager.addDataset({ headers, rows }, "");
+        TableManager.addDataset({ headers, rows }, originalFileName);
         resolve({ headers, rows });
       };
       reader.onerror = reject;
@@ -398,6 +394,7 @@ class DataManager {
   }
 
   static async downloadData(e) {
+
     function tsvEscape(val) {
       if (val === null || val === undefined) return "";
       let s = String(val);
@@ -414,9 +411,12 @@ class DataManager {
     let headerWritten = false;
     const originalDataset = datasets._activeidx; // save so we can restore after export
 
+    const filters = []
     for (let i = 0; i < datasets._list.length; i++) {
-      switchDataset(i);
+      await TableManager.switchDataset(i);
 
+      filters.push(gridApi.getFilterModel());
+      
       // 1. Determine visible columns in current display order
       const allColumns = gridApi.getAllDisplayedColumns();
       const fields = allColumns
@@ -453,7 +453,7 @@ class DataManager {
       });
     }
 
-    switchDataset(originalDataset); // restore whatever the user was looking at
+    await TableManager.switchDataset(originalDataset); // restore whatever the user was looking at
 
     if (lines.length <= 1) {
       alert("No rows to export with the current settings.");
@@ -463,7 +463,7 @@ class DataManager {
     const tsvContent = lines.join("\n");
 
     try {
-      const response = await fetch("output.tsv", {
+      let response = await fetch("output.tsv", {
         method: "PUT",
         body: tsvContent,
       });
@@ -474,6 +474,22 @@ class DataManager {
           `Errore HTTP: ${response.status} ${response.statusText}`,
         );
       }
+
+      for (const [idx, filterModel] of filters.entries()){
+        console.log(idx, filterModel, DataManager.filterURI[idx])
+        response = await fetch(DataManager.filterURI[idx], {
+          method: "PUT",
+          body: JSON.stringify(filterModel),
+        });
+  
+        if (!response.ok) {
+          console.log(response);
+          throw new Error(
+            `Errore HTTP: ${response.status} ${response.statusText}`,
+          );
+        }
+      }
+
 
       alert("File salvato con successo!");
     } catch (error) {
@@ -680,6 +696,8 @@ class TableManager {
     for (const k of Object.keys(savedState.notes)) {
       ds.rows[k].Notes = savedState.notes[k];
     }
+    if (!savedState.state.filter)
+      savedState.state.filter = {filterModel: datasets.get(which).filterModel}
     console.log({ savedState });
     this.initGrid(ds.headers, ds.rows, savedState.state);
     document.getElementById("folder-filename").textContent = ds.name;

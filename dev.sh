@@ -36,12 +36,28 @@ exec docker run --rm -it --name "$NAME" -p "$PORT:8080" -u "$(id -u)" \
   -v "$PWD/example_data:/gx:z" \
   "${mounts[@]}" \
   --entrypoint bash "$IMAGE" -c '
+# Simulate Galaxy inputs
+input1=/gx/hom_file.tsv
+input2=/gx/het_file.tsv
+input3=/gx/comp_file.tsv
+input4=/gx/hom_filters.json
+input5=/gx/het_filters.json
+input6=/gx/comp_filters.json
+# Simulate Galaxy ENVs
 OUT=/gx/output.tsv
 HOM_FILENAME=hom_filename.tsv
 HET_FILENAME=het_filename.tsv
 COMP_FILENAME=comp_filename.tsv
-ln -s /gx/hom_file.tsv /usr/share/nginx/html/input1.tsv
-ln -s /gx/het_file.tsv /usr/share/nginx/html/input2.tsv
+
+# Link inputs and outputs
+link_names=(input1.tsv input2.tsv input3.tsv hom_filters.json het_filters.json comp_filters.json)
+for ((i = 0; i < ${#link_names[@]}; i++)); do
+  var="input$((i + 1))"
+  src="${!var:-}"
+  [ -f "$src" ] && ln -s "$src" "/usr/share/nginx/html/${link_names[i]}"
+done
+
+# Make server-side state files
 mkdir -p "$(dirname $OUT)/.nginx_tmp"
 mkdir -p /tmp/state
 for file_name in hom_state het_state comp_state; do
