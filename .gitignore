@@ -1,3 +1,4 @@
 example_data/output.tsv
 example_data/.nginx_tmp/
 example_data/*.json
+dev.sh

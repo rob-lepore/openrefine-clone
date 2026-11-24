@@ -721,7 +721,7 @@ class TableManager {
     let selected = gridApi.getSelectedRows().length;
     UIManager.els.status.textContent =
       `${displayed} shown / ${total} total rows` +
-      (selected > 0 ? ` — ${selected} selected` : "");
+      (selected > 0 ? ` — ${selected} selected`  : "");
   }
 
   static updateDatasetsState() {
@@ -771,8 +771,11 @@ class TableManager {
   static CheckboxListFilter = class {
     init(params) {
       this.params = params;
-      this.selected = null; // null = nessun filtro (tutto selezionato)
+      this.mode = "values"; // "values" | "contains"
+      this.selected = null; // values mode: null = everything selected
+      this.terms = [""]; // contains mode: clauses combined in OR
       this.allValues = [];
+      this.built = false;
       this.eGui = document.createElement("div");
       this.eGui.className = "checkbox-filter-panel";
     }
@@ -789,27 +792,42 @@ class TableManager {
       this.buildUI();
     }
 
-    // Se tutti i valori sono selezionati, torna a "nessun filtro"
-    normalize() {
-      if (this.selected && this.allValues.every((v) => this.selected.has(v))) {
-        this.selected = null;
-      }
-    }
-
-    isChecked(v) {
-      return this.selected === null || this.selected.has(v);
-    }
-
-    setChecked(v, checked) {
-      if (this.selected === null) this.selected = new Set(this.allValues);
-      if (checked) this.selected.add(v);
-      else this.selected.delete(v);
-      this.normalize();
-    }
+    /* ---------- UI ---------- */
 
     buildUI() {
       this.eGui.innerHTML = "";
 
+      const tabs = document.createElement("div");
+      tabs.className = "checkbox-filter-tabs";
+      [
+        ["values", "Values"],
+        ["contains", "Contains"],
+      ].forEach(([mode, label]) => {
+        const btn = document.createElement("button");
+        btn.textContent = label;
+        btn.className =
+          "checkbox-filter-tab" + (this.mode === mode ? " active" : "");
+        btn.addEventListener("click", () => {
+          if (this.mode === mode) return;
+          this.mode = mode; // the other mode's state is kept but ignored
+          this.buildUI();
+          this.params.filterChangedCallback();
+        });
+        tabs.appendChild(btn);
+      });
+      this.eGui.appendChild(tabs);
+
+      this.bodyEl = document.createElement("div");
+      this.eGui.appendChild(this.bodyEl);
+      this.built = true;
+
+      if (this.mode === "values") this.buildValuesUI();
+      else this.buildContainsUI();
+    }
+
+    /* ----- values mode ----- */
+
+    buildValuesUI() {
       const searchBox = document.createElement("input");
       searchBox.type = "text";
       searchBox.placeholder = "Search values...";
@@ -817,7 +835,7 @@ class TableManager {
       searchBox.addEventListener("input", () =>
         this.renderList(searchBox.value),
       );
-      this.eGui.appendChild(searchBox);
+      this.bodyEl.appendChild(searchBox);
 
       const actions = document.createElement("div");
       actions.className = "checkbox-filter-actions";
@@ -836,30 +854,41 @@ class TableManager {
         this.params.filterChangedCallback();
       });
       actions.append(selectAllBtn, clearBtn);
-      this.eGui.appendChild(actions);
+      this.bodyEl.appendChild(actions);
 
       this.listEl = document.createElement("div");
       this.listEl.className = "checkbox-filter-list";
-      this.eGui.appendChild(this.listEl);
+      this.bodyEl.appendChild(this.listEl);
+      this.hiddenEl = null;
 
       this.renderList("");
+    }
+
+    isChecked(v) {
+      return this.selected === null || this.selected.has(v);
+    }
+
+    setChecked(v, checked) {
+      if (this.selected === null) this.selected = new Set(this.allValues);
+      if (checked) this.selected.add(v);
+      else this.selected.delete(v);
+      if (this.allValues.every((x) => this.selected.has(x)))
+        this.selected = null;
     }
 
     renderList(searchTerm) {
       this.listEl.innerHTML = "";
 
-      // Selected values that do not exist in the table
       const missing = this.selected
         ? [...this.selected].filter((v) => !this.allValues.includes(v)).length
         : 0;
-
       if (missing > 0) {
         const warn = document.createElement("div");
         warn.className = "checkbox-filter-warning";
-        const noneFound = this.selected.size === missing;
-        warn.textContent = noneFound
-          ? "None of the selected values are present"
-          : `${missing} selected value${missing > 1 ? "s are" : " is"} not present`;
+        warn.textContent =
+          this.selected.size === missing
+            ? "None of the selected values are present"
+            : `${missing} selected value${missing > 1 ? "s are" : " is"} not present`;
         this.listEl.appendChild(warn);
       }
 
@@ -875,6 +904,7 @@ class TableManager {
           cb.checked = this.isChecked(v);
           cb.addEventListener("change", () => {
             this.setChecked(v, cb.checked);
+            this.updateHiddenSelectedInfo();
             this.params.filterChangedCallback();
           });
 
@@ -883,45 +913,162 @@ class TableManager {
           row.append(cb, text);
           this.listEl.appendChild(row);
         });
+
+      this.updateHiddenSelectedInfo(this.listEl);
     }
+
+    /* Rows that are selected in the grid but do not pass THIS filter */
+    updateHiddenSelectedInfo(element) {
+      if (!this.hiddenEl) {
+        this.hiddenEl = document.createElement("div");
+        this.hiddenEl.className = "checkbox-filter-warning";
+        element.before(this.hiddenEl);
+      }
+
+      const field = this.params.colDef.field;
+      const nodes = this.params.api.getSelectedNodes();
+      let hidden;
+
+      if (this.mode === "values") {
+        hidden = nodes.filter(
+          (n) => !this.isChecked(String(n.data[field])),
+        ).length;
+      } else {
+        const terms = this.activeTerms();
+        hidden =
+          terms.length === 0
+            ? 0
+            : nodes.filter((n) => {
+                const v = String(n.data[field]).toLowerCase();
+                return !terms.some((t) => v.includes(t));
+              }).length;
+      }
+
+      this.hiddenEl.hidden = hidden === 0;
+      this.hiddenEl.textContent = `${hidden} selected row${hidden > 1 ? "s are" : " is"} hidden by this filter`;
+    }
+
+    /* ----- contains mode ----- */
+
+    buildContainsUI() {
+      this.termsEl = document.createElement("div");
+      this.termsEl.className = "checkbox-filter-terms";
+      this.bodyEl.appendChild(this.termsEl);
+
+      const addBtn = document.createElement("button");
+      addBtn.textContent = "+ Add condition (OR)";
+      addBtn.addEventListener("click", () => {
+        this.terms.push("");
+        this.renderTerms();
+      });
+      this.bodyEl.appendChild(addBtn);
+      this.hiddenEl = null;
+
+      this.renderTerms();
+    }
+
+    renderTerms() {
+      this.termsEl.innerHTML = "";
+      this.terms.forEach((t, i) => {
+        const row = document.createElement("div");
+        row.className = "checkbox-filter-term-row";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Contains...";
+        input.value = t;
+        // no re-render while typing, otherwise the input loses focus
+        input.addEventListener("input", () => {
+          this.terms[i] = input.value;
+          this.params.filterChangedCallback();
+          this.updateHiddenSelectedInfo(this.termsEl);
+        });
+
+        const rm = document.createElement("button");
+        rm.textContent = "×";
+        rm.addEventListener("click", () => {
+          this.terms.splice(i, 1);
+          if (this.terms.length === 0) this.terms.push("");
+          this.renderTerms();
+          this.params.filterChangedCallback();
+        });
+
+        row.append(input, rm);
+        this.termsEl.appendChild(row);
+      });
+      this.updateHiddenSelectedInfo(this.termsEl);
+
+    }
+
+    activeTerms() {
+      return this.terms
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => t !== "");
+    }
+
+    /* ---------- AG Grid filter interface ---------- */
 
     getGui() {
       return this.eGui;
     }
 
     isFilterActive() {
-      return this.selected !== null;
+      return this.mode === "values"
+        ? this.selected !== null
+        : this.activeTerms().length > 0;
     }
 
     doesFilterPass(p) {
-      return (
-        this.selected === null ||
-        this.selected.has(String(p.data[this.params.colDef.field]))
-      );
+      const value = String(p.data[this.params.colDef.field]);
+      if (this.mode === "values") {
+        return this.selected === null || this.selected.has(value);
+      }
+      const v = value.toLowerCase();
+      return this.activeTerms().some((t) => v.includes(t));
     }
 
     getModel() {
-      return this.selected === null
-        ? null
-        : { values: Array.from(this.selected) };
+      if (!this.isFilterActive()) return null;
+      return {
+        mode: this.mode,
+        values: Array.from(this.selected ?? []),
+        terms: this.terms.filter((t) => t.trim() !== ""),
+      };
+      return this.mode === "values"
+        ? { mode: "values", values: Array.from(this.selected) }
+        : {
+            mode: "contains",
+            terms: this.terms.filter((t) => t.trim() !== ""),
+          };
     }
 
     setModel(model) {
-      this.selected = model?.values ? new Set(model.values) : null;
-      if (this.listEl) this.renderList("");
+      this.mode = model?.mode ?? "values";
+      // this.selected = model?.mode === "values" ? new Set(model.values) : null;
+      this.selected = new Set(model?.values ?? []);
+      // this.terms =
+      //   model?.mode === "contains" && model.terms.length
+      //     ? [...model.terms]
+      //     : [""];
+      this.terms = model?.terms ?? [];
+      if (this.built) this.buildUI();
     }
   };
 
   static CheckboxListFloatingFilter = class {
-    init(params) {
+    init() {
       this.eGui = document.createElement("div");
-      this.eGui.style.cssText = "margin:auto 0;opacity:.8";
+      this.eGui.style.cssText =
+        "margin:auto 0;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
     }
     getGui() {
       return this.eGui;
     }
     onParentModelChanged(model) {
-      this.eGui.textContent = model ? `${model.values.length} selected` : "";
+      if (!model) this.eGui.textContent = "";
+      else if (model.mode === "values")
+        this.eGui.textContent = `${model.values.length} selected`;
+      else this.eGui.textContent = `${model.terms.join(" | ")}`;
     }
   };
 }
