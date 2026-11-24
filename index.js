@@ -318,6 +318,11 @@ class DataManager {
     1: "het_filters.json",
     2: "comp_filters.json",
   };
+  static outFilterURI = {
+    0: "out_hom_filters.json",
+    1: "out_het_filters.json",
+    2: "out_comp_filters.json",
+  }
 
   static downloadFilters() {
     const configs = gridApi.getFilterModel();
@@ -473,8 +478,7 @@ class DataManager {
       }
 
       for (const [idx, filterModel] of filters.entries()) {
-        console.log(idx, filterModel, DataManager.filterURI[idx]);
-        response = await fetch(DataManager.filterURI[idx], {
+        response = await fetch(DataManager.outFilterURI[idx], {
           method: "PUT",
           body: JSON.stringify(filterModel),
         });

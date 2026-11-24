@@ -43,7 +43,7 @@ input3=/gx/comp_file.tsv
 input4=/gx/hom_filters.json
 input5=/gx/het_filters.json
 input6=/gx/comp_filters.json
-out_file1=/gx/output.tsv
+out_dir=/gx/gr_outputs
 
 # Link inputs and outputs
 link_names=(input1.tsv input2.tsv input3.tsv hom_filters.json het_filters.json comp_filters.json)
@@ -54,11 +54,14 @@ for ((i = 0; i < ${#link_names[@]}; i++)); do
 done
 
 # Make server-side state files
-mkdir -p "$(dirname $out_file1)/.nginx_tmp"
+mkdir -p /tmp/.nginx_tmp
 mkdir -p /tmp/state
 for file_name in hom_state het_state comp_state; do
   echo "{\"state\": {}, \"notes\": {}}" > "/tmp/state/${file_name}.json"
 done
 echo "{\"0\": \"$(basename "$input1")\", \"1\": \"$(basename "$input2")\", \"2\": \"$(basename "$input3")\" }" > "/tmp/state/user_file_names.json"
-sed -e "s|__OUT__|$out_file1|g" -e "s|__OUTDIR__|$(dirname $out_file1)|g" /etc/nginx/nginx.conf.tpl > /tmp/nginx.conf
+
+# Make outputs dir
+mkdir -p "$out_dir"
+sed -e "s|__OUTDIR__|$out_dir|g" /etc/nginx/nginx.conf.tpl > /tmp/nginx.conf
 nginx -c /tmp/nginx.conf -g "daemon off;"'

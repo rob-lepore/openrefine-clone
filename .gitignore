@@ -1,4 +1,5 @@
 example_data/output.tsv
 example_data/.nginx_tmp/
 example_data/*.json
+example_data/gr_outputs
 dev.sh
